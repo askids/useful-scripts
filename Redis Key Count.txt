@@ -1,0 +1,51 @@
+using System;
+using System.Linq;
+using StackExchange.Redis;
+
+class Program
+{
+    static void Main()
+    {
+        // Replace these values with your Redis connection information
+        string redisConnectionString = "your-redis-enterprise-connection-string";
+        string keyPattern = "abc*";
+        string streamKey = "your-stream-key";
+        string consumerGroup = "your-consumer-group";
+
+        // Count keys matching a pattern in Redis
+        var keyCount = CountKeys(redisConnectionString, keyPattern);
+        Console.WriteLine($"Total number of keys matching the pattern '{keyPattern}': {keyCount}");
+
+        // Count unprocessed messages in a Redis Stream
+        var messageCount = CountUnprocessedMessages(redisConnectionString, streamKey, consumerGroup);
+        Console.WriteLine($"Total number of unprocessed messages in the stream '{streamKey}' for consumer group '{consumerGroup}': {messageCount}");
+    }
+
+    static int CountKeys(string connectionString, string pattern)
+    {
+        var connection = ConnectionMultiplexer.Connect(connectionString);
+        var totalKeyCount = 0;
+
+        foreach (var endpoint in connection.GetEndPoints())
+        {
+            var server = connection.GetServer(endpoint);
+            var keys = server.Keys(pattern: pattern);
+            totalKeyCount += keys.Count();
+        }
+
+        connection.Close();
+        return totalKeyCount;
+    }
+
+    static int CountUnprocessedMessages(string connectionString, string streamKey, string consumerGroup)
+    {
+        var connection = ConnectionMultiplexer.Connect(connectionString);
+        var database = connection.GetDatabase();
+
+        var pendingInfo = database.StreamPendingMessages(streamKey, consumerGroup);
+        var totalUnprocessedMessages = pendingInfo.TotalPending;
+
+        connection.Close();
+        return totalUnprocessedMessages;
+    }
+}
