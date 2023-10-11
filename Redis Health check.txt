@@ -1,0 +1,103 @@
+using System;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using StackExchange.Redis;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        var host = new WebHostBuilder()
+            .UseKestrel()
+            .ConfigureServices(services =>
+            {
+                // Add a singleton ConnectionMultiplexer instance
+                services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect("your-redis-connection-string"));
+
+                // Add health checks
+                services.AddHealthChecks()
+                    .AddCheck("redis_keys_check", new RedisKeyHealthCheck("abc*"))
+                    .AddCheck("redis_stream_check", new RedisStreamHealthCheck("your-stream-key", "your-consumer-group"));
+            })
+            .Configure(app =>
+            {
+                // Add health check endpoint
+                app.UseEndpoints(endpoints =>
+                {
+                    endpoints.MapHealthChecks("/health");
+                });
+            })
+            .Build();
+
+        host.Run();
+    }
+}
+
+public class RedisKeyHealthCheck : IHealthCheck
+{
+    private readonly IConnectionMultiplexer _connectionMultiplexer;
+    private readonly string _keyPattern;
+
+    public RedisKeyHealthCheck(IConnectionMultiplexer connectionMultiplexer, string keyPattern)
+    {
+        _connectionMultiplexer = connectionMultiplexer;
+        _keyPattern = keyPattern;
+    }
+
+    public HealthCheckResult CheckHealth()
+    {
+        var connection = _connectionMultiplexer.GetDatabase();
+        var totalKeyCount = 0;
+
+        foreach (var endpoint in _connectionMultiplexer.GetEndPoints())
+        {
+            var server = _connectionMultiplexer.GetServer(endpoint);
+            var keys = server.Keys(pattern: _keyPattern);
+            totalKeyCount += keys.Count();
+        }
+
+        if (totalKeyCount > 0)
+        {
+            return HealthCheckResult.Healthy($"Total number of keys matching the pattern '{_keyPattern}': {totalKeyCount}");
+        }
+        else
+        {
+            return HealthCheckResult.Unhealthy($"No keys matching the pattern '{_keyPattern}' found.");
+        }
+    }
+}
+
+public class RedisStreamHealthCheck : IHealthCheck
+{
+    private readonly IConnectionMultiplexer _connectionMultiplexer;
+    private readonly string _streamKey;
+    private readonly string _consumerGroup;
+
+    public RedisStreamHealthCheck(IConnectionMultiplexer connectionMultiplexer, string streamKey, string consumerGroup)
+    {
+        _connectionMultiplexer = connectionMultiplexer;
+        _streamKey = streamKey;
+        _consumerGroup = consumerGroup;
+    }
+
+    public HealthCheckResult CheckHealth()
+    {
+        var database = _connectionMultiplexer.GetDatabase();
+
+        var pendingInfo = database.StreamPendingMessages(_streamKey, _consumerGroup);
+        var totalUnprocessedMessages = pendingInfo.TotalPending;
+
+        if (totalUnprocessedMessages > 0)
+        {
+            return HealthCheckResult.Healthy($"Total number of unprocessed messages in the stream '{_streamKey}' for consumer group '{_consumerGroup}': {totalUnprocessedMessages}");
+        }
+        else
+        {
+            return HealthCheckResult.Unhealthy($"No unprocessed messages in the stream '{_streamKey}' for consumer group '{_consumerGroup}'.");
+        }
+    }
+}
