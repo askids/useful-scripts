@@ -21,3 +21,6 @@ Register-ScheduledTask -Action $taskAction -Trigger $taskTrigger -TaskName 'Chec
 
 # Example command to create 
 schtasks /create /sc minute /mo 10 /tn "MonitorAgentTask" /tr "D:\test\test.bat" /ru system
+
+# Delete task
+schtasks /delete /tn MonitorAgentTask /f
