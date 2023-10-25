@@ -20,8 +20,16 @@ class Program
 
                 // Add health checks
                 services.AddHealthChecks()
-                    .AddCheck("redis_keys_check", new RedisKeyHealthCheck("abc*"))
-                    .AddCheck("redis_stream_check", new RedisStreamHealthCheck("your-stream-key", "your-consumer-group"));
+                    .AddCheck("redis_keys_check", new HealthCheckRegistration(
+                        "redis_keys_check",
+                        sp => new RedisKeyHealthCheck(sp.GetRequiredService<IConnectionMultiplexer>(), "abc*"),
+                        failureStatus: HealthStatus.Unhealthy,
+                        null));
+                    .AddCheck("redis_stream_check", new HealthCheckRegistration(
+                        "redis_stream_check",
+                        sp => new RedisStreamHealthCheck(sp.GetRequiredService<IConnectionMultiplexer>(), "your-stream-key", "your-consumer-group"),
+                        failureStatus: HealthStatus.Unhealthy,
+                        null));
             })
             .Configure(app =>
             {
