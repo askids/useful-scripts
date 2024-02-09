@@ -1,10 +1,10 @@
 using System;
 using System.ServiceModel;
+using System.ServiceModel.Description;
 using System.ServiceModel.Dispatcher;
 
 public class CustomMessageInspector : IClientMessageInspector
 {
-    // You may need to inject configuration or use another mechanism to determine the header type.
     private readonly bool useCookie;
 
     public CustomMessageInspector(bool useCookie)
@@ -14,37 +14,13 @@ public class CustomMessageInspector : IClientMessageInspector
 
     public object BeforeSendRequest(ref Message request, IClientChannel channel)
     {
-        // Add the appropriate header based on the configuration.
         if (useCookie)
         {
-            HttpRequestMessageProperty httpRequestMessage;
-            if (request.Properties.ContainsKey(HttpRequestMessageProperty.Name))
-            {
-                httpRequestMessage = (HttpRequestMessageProperty)request.Properties[HttpRequestMessageProperty.Name];
-            }
-            else
-            {
-                httpRequestMessage = new HttpRequestMessageProperty();
-                request.Properties.Add(HttpRequestMessageProperty.Name, httpRequestMessage);
-            }
-
-            httpRequestMessage.Headers["Cookie"] = "your_cookie_value";
+            // Add logic to include Cookie header
         }
         else
         {
-            HttpRequestMessageProperty httpRequestMessage;
-            if (request.Properties.ContainsKey(HttpRequestMessageProperty.Name))
-            {
-                httpRequestMessage = (HttpRequestMessageProperty)request.Properties[HttpRequestMessageProperty.Name];
-            }
-            else
-            {
-                httpRequestMessage = new HttpRequestMessageProperty();
-                request.Properties.Add(HttpRequestMessageProperty.Name, httpRequestMessage);
-            }
-
-            // Add authorization header logic here
-            httpRequestMessage.Headers["Authorization"] = "Bearer your_access_token";
+            // Add logic to include Authorization header
         }
 
         return null;
@@ -53,7 +29,29 @@ public class CustomMessageInspector : IClientMessageInspector
     public void AfterReceiveReply(ref Message reply, object correlationState) { }
 }
 
+// Custom endpoint behavior to add the custom message inspector
+public class CustomEndpointBehavior : IEndpointBehavior
+{
+    private readonly bool useCookie;
+
+    public CustomEndpointBehavior(bool useCookie)
+    {
+        this.useCookie = useCookie;
+    }
+
+    public void AddBindingParameters(ServiceEndpoint endpoint, System.ServiceModel.Channels.BindingParameterCollection bindingParameters) { }
+
+    public void ApplyClientBehavior(ServiceEndpoint endpoint, ClientRuntime clientRuntime)
+    {
+        clientRuntime.MessageInspectors.Add(new CustomMessageInspector(useCookie));
+    }
+
+    public void ApplyDispatchBehavior(ServiceEndpoint endpoint, EndpointDispatcher endpointDispatcher) { }
+
+    public void Validate(ServiceEndpoint endpoint) { }
+}
+
 // Usage:
-// Configure your WCF client to use the CustomMessageInspector
+// Configure your WCF client to use the CustomEndpointBehavior
 var client = new YourWcfClient();
-client.Endpoint.EndpointBehaviors.Add(new CustomMessageInspector(true)); // Example: using Cookie header
+client.Endpoint.Behaviors.Add(new CustomEndpointBehavior(true)); // Example: using Cookie header
