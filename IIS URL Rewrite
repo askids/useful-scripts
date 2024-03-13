@@ -4,20 +4,14 @@ $moduleName = "IIS URL Rewrite Module 2"
 # MSI installer path for URL Rewrite Module - Update this path
 $installerPath = "C:\Path\To\rewrite_amd64_en-US.msi"
 
-# Log file path for the installer - Update this path
-$logFilePath = "C:\Path\To\InstallerLog.log"
+# Define the log file path for the MSI installation
+$logFilePath = "C:\Path\To\InstallationLog.log"
 
-# Function to check if URL Rewrite Module is installed
+# Function to check if URL Rewrite Module is installed (64-bit only)
 function Check-UrlRewriteInstalled {
-    # Check 64-bit registry view only, as we are targeting a 64-bit app environment
     $path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*"
-    
     $installed = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like "*$moduleName*" }
-    if ($installed) {
-        return $true
-    }
-
-    return $false
+    return $null -ne $installed
 }
 
 # Check if URL Rewrite Module is installed
@@ -25,15 +19,13 @@ if (Check-UrlRewriteInstalled) {
     Write-Host "IIS URL Rewrite Module is already installed."
 } else {
     Write-Host "IIS URL Rewrite Module is not installed. Attempting to install..."
-    
     # Run MSI installer silently with logging
-    $installArgs = "/i `"$installerPath`" /qn /l*v `"$logFilePath`""
-    Start-Process "msiexec.exe" -ArgumentList $installArgs -Wait -NoNewWindow
-    
+    Start-Process "msiexec.exe" -ArgumentList "/i `"$installerPath`" /qn /L*V `"$logFilePath`"" -Wait -NoNewWindow
+
     # Check if installation was successful
     if (Check-UrlRewriteInstalled) {
         Write-Host "IIS URL Rewrite Module installed successfully."
     } else {
-        Write-Host "Failed to install IIS URL Rewrite Module. Check the log at $logFilePath for details."
+        Write-Host "Failed to install IIS URL Rewrite Module. Check log at $logFilePath"
     }
 }
