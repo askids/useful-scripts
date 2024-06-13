@@ -1,0 +1,31 @@
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
+using Yarp.ReverseProxy.Transforms;
+
+public class Startup
+{
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddHttpClient();
+        services.AddMemoryCache();
+
+        services.AddReverseProxy()
+            .LoadFromConfig(Configuration.GetSection("ReverseProxy"))
+            .AddTransformProvider(sp => new CustomTransformProvider(
+                sp.GetRequiredService<IHttpClientFactory>(),
+                sp.GetRequiredService<IMemoryCache>(),
+                Configuration["IntrospectionEndpoint"],
+                Configuration["ClientId"],
+                Configuration["ClientSecret"]
+            ));
+    }
+
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        app.UseRouting();
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapReverseProxy();
+        });
+    }
+}
