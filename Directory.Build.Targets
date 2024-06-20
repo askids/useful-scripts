@@ -1,0 +1,27 @@
+<Project>
+  <PropertyGroup>
+    <!-- Define custom properties here if needed -->
+  </PropertyGroup>
+
+  <!-- Target for building all frameworks -->
+  <Target Name="BuildAllFrameworks">
+    <ItemGroup>
+      <Frameworks Include="net6.0;net5.0;netcoreapp3.1" />
+    </ItemGroup>
+
+    <MSBuild Projects="@(ProjectReference)"
+             Targets="Build"
+             Properties="Configuration=$(Configuration);TargetFramework=%(Frameworks.Identity)" />
+  </Target>
+
+  <!-- Target for publishing all frameworks -->
+  <Target Name="PublishAllFrameworks">
+    <ItemGroup>
+      <Frameworks Include="net6.0;net5.0;netcoreapp3.1" />
+    </ItemGroup>
+
+    <MSBuild Projects="@(ProjectReference)"
+             Targets="Publish"
+             Properties="Configuration=$(Configuration);TargetFramework=%(Frameworks.Identity);PublishDir=$(PublishDir)\%(Frameworks.Identity)\" />
+  </Target>
+</Project>
