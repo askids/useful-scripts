@@ -1,0 +1,10 @@
+<configuration>
+  <system.webServer>
+    <modules>
+      <add name="PingAccessAgentModule" type="PingAccess.Agent.PingAccessAgentModule, PingAccess.Agent" />
+    </modules>
+    <handlers>
+      <add name="PingAccessHttpHandler" path="*" verb="*" type="PingAccess.Agent.PingAccessHttpHandler, PingAccess.Agent" resourceType="Unspecified" preCondition="integratedMode" />
+    </handlers>
+  </system.webServer>
+</configuration>
