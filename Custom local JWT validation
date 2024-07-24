@@ -1,0 +1,101 @@
+using Microsoft.Extensions.Caching.Memory;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text.Json;
+using System.Threading.Tasks;
+
+public class Startup
+{
+    private readonly IMemoryCache _memoryCache;
+
+    public Startup(IMemoryCache memoryCache)
+    {
+        _memoryCache = memoryCache;
+    }
+
+    // Method to fetch the public key based on the kid value
+    private async Task<SecurityKey> GetSigningKey(string kid)
+    {
+        // Try to get the key from cache
+        if (!_memoryCache.TryGetValue(kid, out RsaSecurityKey securityKey))
+        {
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync($"https://your-custom-endpoint/{kid}");
+            response.EnsureSuccessStatusCode();
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            var publicKeyData = JsonSerializer.Deserialize<PublicKeyResponse>(jsonResponse);
+
+            // Assuming the response contains the public key in PEM format
+            var rsa = RSA.Create();
+            rsa.ImportFromPem(publicKeyData.PublicKey);
+            securityKey = new RsaSecurityKey(rsa);
+
+            // Cache the key for 15 minutes
+            var cacheEntryOptions = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(TimeSpan.FromMinutes(15));
+
+            _memoryCache.Set(kid, securityKey, cacheEntryOptions);
+        }
+
+        return securityKey;
+    }
+
+    // Model to deserialize the response from the custom endpoint
+    private class PublicKeyResponse
+    {
+        public string PublicKey { get; set; }
+    }
+
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddMemoryCache();
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var token = context.Request.Headers["Authorization"].ToString().Replace("Bearer ", string.Empty);
+                    context.Token = token;
+                    return Task.CompletedTask;
+                }
+            };
+
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
+                {
+                    return new[] { GetSigningKey(kid).Result };
+                },
+                ValidIssuer = "your-issuer",
+                ValidAudience = "your-audience",
+            };
+        });
+
+        services.AddControllers();
+    }
+
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        app.UseRouting();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapControllers();
+        });
+    }
+}
