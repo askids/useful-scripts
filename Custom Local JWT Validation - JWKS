@@ -29,19 +29,25 @@ public class Startup
             var rsaPublicKey = certificate.GetRSAPublicKey();
             var rsaParameters = rsaPublicKey.ExportParameters(false);
 
-            var jsonWebKey = new JsonWebKey
+            // Create the anonymous object
+            var jwkObject = new
             {
-                Kid = kid,
-                Kty = JsonWebAlgorithmsKeyTypes.RSA,
-                Use = "sig",  // Assuming the key is used for signing
-                N = Base64UrlEncoder.Encode(rsaParameters.Modulus),
-                E = Base64UrlEncoder.Encode(rsaParameters.Exponent),
-                X5c = new[] { Convert.ToBase64String(certificate.RawData) }
+                kid,
+                kty = JsonWebAlgorithmsKeyTypes.RSA,
+                use = "sig",
+                n = Base64UrlEncoder.Encode(rsaParameters.Modulus),
+                e = Base64UrlEncoder.Encode(rsaParameters.Exponent),
+                x5c = new[] { Convert.ToBase64String(certificate.RawData) }
             };
+
+            // Serialize to JSON
+            var jwkJson = JsonSerializer.Serialize(jwkObject);
+
+            // Deserialize back to JsonWebKey
+            var jsonWebKey = JsonSerializer.Deserialize<JsonWebKey>(jwkJson);
 
             jsonWebKeySet = new JsonWebKeySet(new[] { jsonWebKey });
 
-            // Cache the key set for 15 minutes
             var cacheEntryOptions = new MemoryCacheEntryOptions()
                 .SetAbsoluteExpiration(TimeSpan.FromMinutes(15));
 
@@ -59,12 +65,6 @@ public class Startup
                         .Replace("\n", "")
                         .Replace("\r", "");
         return Convert.FromBase64String(base64);
-    }
-
-    // Model to deserialize the response from the custom endpoint
-    private class PublicKeyResponse
-    {
-        public string PublicKey { get; set; }
     }
 
     public void ConfigureServices(IServiceCollection services)
