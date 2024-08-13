@@ -1,0 +1,41 @@
+using System;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
+using Microsoft.IdentityModel.Tokens;
+
+public class Program
+{
+    public static void Main()
+    {
+        // Load the certificate
+        var certificate = new X509Certificate2("path_to_your_certificate.cer");
+        
+        // Extract the public key
+        var rsaPublicKey = certificate.GetRSAPublicKey();
+
+        if (rsaPublicKey == null)
+        {
+            throw new InvalidOperationException("Certificate does not contain an RSA public key.");
+        }
+
+        // Convert the public key to JWK
+        var jwk = new JsonWebKey
+        {
+            Kty = JsonWebAlgorithmsKeyTypes.RSA,
+            Use = "sig", // This indicates that the key is used for signature verification
+            Kid = Base64UrlEncoder.Encode(certificate.GetCertHash()), // Key ID, typically the thumbprint
+            E = Base64UrlEncoder.Encode(rsaPublicKey.ExportParameters(false).Exponent), // Exponent
+            N = Base64UrlEncoder.Encode(rsaPublicKey.ExportParameters(false).Modulus) // Modulus
+        };
+
+        // Create JWKS
+        var jwks = new JsonWebKeySet(new List<JsonWebKey> { jwk });
+
+        // Serialize to JSON
+        var jwksJson = JsonSerializer.Serialize(jwks);
+
+        Console.WriteLine(jwksJson);
+    }
+}
