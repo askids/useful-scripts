@@ -1,0 +1,121 @@
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
+using System.Threading.Tasks;
+
+public class Startup
+{
+    private readonly IMemoryCache _memoryCache;
+
+    public Startup(IMemoryCache memoryCache)
+    {
+        _memoryCache = memoryCache;
+    }
+
+    private async Task<JsonWebKeySet> GetSigningKeys(string kid)
+    {
+        if (!_memoryCache.TryGetValue(kid, out JsonWebKeySet jsonWebKeySet))
+        {
+            using var httpClient = new HttpClient();
+            var response = await httpClient.GetAsync($"https://your-custom-endpoint/{kid}");
+            response.EnsureSuccessStatusCode();
+
+            var pemCertificate = await response.Content.ReadAsStringAsync();
+            var certificate = new X509Certificate2(ConvertPemToDer(pemCertificate));
+
+            // Extract the RSA public key
+            var rsaPublicKey = certificate.GetRSAPublicKey();
+            var rsaParameters = rsaPublicKey.ExportParameters(false);
+
+            var jsonWebKey = new JsonWebKey
+            {
+                Kid = kid,
+                Kty = JsonWebAlgorithmsKeyTypes.RSA,
+                Use = "sig",  // Assuming the key is used for signing
+                N = Base64UrlEncoder.Encode(rsaParameters.Modulus),
+                E = Base64UrlEncoder.Encode(rsaParameters.Exponent),
+                X5c = new[] { Convert.ToBase64String(certificate.RawData) }
+            };
+
+            jsonWebKeySet = new JsonWebKeySet(new[] { jsonWebKey });
+
+            // Cache the key set for 15 minutes
+            var cacheEntryOptions = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(TimeSpan.FromMinutes(15));
+
+            _memoryCache.Set(kid, jsonWebKeySet, cacheEntryOptions);
+        }
+
+        return jsonWebKeySet;
+    }
+
+    // Convert PEM certificate to DER format
+    private static byte[] ConvertPemToDer(string pem)
+    {
+        var base64 = pem.Replace("-----BEGIN CERTIFICATE-----", "")
+                        .Replace("-----END CERTIFICATE-----", "")
+                        .Replace("\n", "")
+                        .Replace("\r", "");
+        return Convert.FromBase64String(base64);
+    }
+
+    // Model to deserialize the response from the custom endpoint
+    private class PublicKeyResponse
+    {
+        public string PublicKey { get; set; }
+    }
+
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddMemoryCache();
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var token = context.Request.Headers["Authorization"].ToString().Replace("Bearer ", string.Empty);
+                    context.Token = token;
+                    return Task.CompletedTask;
+                }
+            };
+
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
+                {
+                    return GetSigningKeys(kid).Result.Keys;
+                },
+                ValidIssuer = "your-issuer",
+                ValidAudience = "your-audience",
+            };
+        });
+
+        services.AddControllers();
+    }
+
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        app.UseRouting();
+
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapControllers();
+        });
+    }
+}
