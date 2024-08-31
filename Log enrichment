@@ -1,0 +1,65 @@
+using Microsoft.AspNetCore.Mvc;
+using Serilog;
+using Serilog.Context;
+using System;
+using System.Collections.Generic;
+
+[ApiController]
+[Route("[controller]")]
+public class WeatherForecastController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult Get()
+    {
+        // Example of dynamic enrichment parameters
+        var enrichmentParameters = new Dictionary<string, object>
+        {
+            { "UserId", 12345 },
+            { "RequestId", Guid.NewGuid().ToString() },
+            { "ClientIp", HttpContext.Connection.RemoteIpAddress?.ToString() }
+        };
+
+        // Dynamically add enrichment properties
+        using (var logContext = CreateLogContext(enrichmentParameters))
+        {
+            // Log message without using dynamic parameters in the template
+            Log.Information("API called to get weather forecast.");
+
+            // Return some sample data
+            return Ok(new { Message = "Weather forecast data", Date = DateTime.Now });
+        }
+    }
+
+    // Helper method to create log context with dynamic enrichment properties
+    private static IDisposable CreateLogContext(Dictionary<string, object> properties)
+    {
+        var disposables = new List<IDisposable>();
+
+        foreach (var property in properties)
+        {
+            disposables.Add(LogContext.PushProperty(property.Key, property.Value));
+        }
+
+        // Return a single disposable to properly dispose of all context items
+        return new CombinedDisposable(disposables);
+    }
+}
+
+// A helper class to dispose of multiple IDisposable objects
+public class CombinedDisposable : IDisposable
+{
+    private readonly IEnumerable<IDisposable> _disposables;
+
+    public CombinedDisposable(IEnumerable<IDisposable> disposables)
+    {
+        _disposables = disposables;
+    }
+
+    public void Dispose()
+    {
+        foreach (var disposable in _disposables)
+        {
+            disposable.Dispose();
+        }
+    }
+}
