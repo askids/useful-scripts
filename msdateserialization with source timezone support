@@ -23,24 +23,27 @@ public class MicrosoftDateFormatWithESTConverter : JsonConverter<DateTime?>
         {
             DateTime dateTimeToConvert = value.Value;
 
-            // If the DateTime.Kind is Unspecified, treat it as UTC
+            // If the DateTime.Kind is Unspecified, treat it as the source time zone
             if (dateTimeToConvert.Kind == DateTimeKind.Unspecified)
             {
-                // If the source time zone is UTC, treat it as UTC directly
-                if (_sourceTimeZone == TimeZoneInfo.Utc)
-                {
-                    dateTimeToConvert = DateTime.SpecifyKind(dateTimeToConvert, DateTimeKind.Utc);
-                }
-                else
-                {
-                    // Convert the Unspecified DateTime to UTC from the source time zone
-                    dateTimeToConvert = TimeZoneInfo.ConvertTimeToUtc(dateTimeToConvert, _sourceTimeZone);
-                }
+                // Convert Unspecified DateTime to UTC from the source time zone
+                dateTimeToConvert = TimeZoneInfo.ConvertTimeToUtc(dateTimeToConvert, _sourceTimeZone);
             }
             else if (dateTimeToConvert.Kind == DateTimeKind.Local)
             {
                 // Local is treated as the system's local time zone, so convert it to UTC
                 dateTimeToConvert = dateTimeToConvert.ToUniversalTime();
+            }
+
+            // Check if the DateTime is already in UTC
+            if (dateTimeToConvert.Kind == DateTimeKind.Utc)
+            {
+                // No need for conversion, simply use it
+            }
+            else
+            {
+                // If not UTC, treat it as UTC now
+                dateTimeToConvert = DateTime.SpecifyKind(dateTimeToConvert, DateTimeKind.Utc);
             }
 
             // Convert the UTC DateTime to Eastern Standard Time (EST/EDT)
@@ -49,6 +52,12 @@ public class MicrosoftDateFormatWithESTConverter : JsonConverter<DateTime?>
 
             // Calculate Unix time milliseconds
             long unixTimeMilliseconds = new DateTimeOffset(estDateTime).ToUnixTimeMilliseconds();
+
+            // Ensure the value falls within the acceptable range
+            if (unixTimeMilliseconds < 0 || unixTimeMilliseconds > 253402300799999) // valid range for DateTime
+            {
+                throw new ArgumentOutOfRangeException("The resulting time is out of range for serialization.");
+            }
 
             // Serialize in Microsoft Date format: \/Date(ticks)\/
             string microsoftDateFormat = $"\\/Date({unixTimeMilliseconds})\\/";
@@ -66,18 +75,18 @@ class Program
 {
     static void Main()
     {
-        var utcTimeZone = TimeZoneInfo.Utc; // Using UTC time zone for source data
+        var centralTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
         var options = new JsonSerializerOptions
         {
-            Converters = { new MicrosoftDateFormatWithESTConverter(utcTimeZone) } // UTC Time zone for source data
+            Converters = { new MicrosoftDateFormatWithESTConverter(centralTimeZone) } // Central Time zone for source data
         };
 
-        // Test with a DateTime value that is Unspecified (should treat as UTC)
-        DateTime unspecifiedTime = new DateTime(2024, 10, 12, 12, 0, 0, DateTimeKind.Unspecified); // Example value
-        string json = JsonSerializer.Serialize(unspecifiedTime, options);
-        Console.WriteLine("Serialized DateTime (Unspecified as UTC): " + json);
+        // Test with DateTime value sourced from Central Time (Unspecified kind)
+        DateTime centralTime = new DateTime(2024, 10, 12, 12, 0, 0, DateTimeKind.Unspecified); // Example Central Time value
+        string json = JsonSerializer.Serialize(centralTime, options);
+        Console.WriteLine("Serialized DateTime (Central to EST): " + json);
 
-        // Test with a UTC DateTime
+        // Test with UTC DateTime (no conversion should happen)
         DateTime utcTime = DateTime.UtcNow; // Assume this is in UTC
         json = JsonSerializer.Serialize(utcTime, options);
         Console.WriteLine("Serialized DateTime (UTC): " + json);
