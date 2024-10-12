@@ -1,0 +1,82 @@
+using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+public class MicrosoftDateFormatWithESTConverter : JsonConverter<DateTime?>
+{
+    private readonly TimeZoneInfo _sourceTimeZone;
+
+    public MicrosoftDateFormatWithESTConverter(TimeZoneInfo sourceTimeZone)
+    {
+        _sourceTimeZone = sourceTimeZone;
+    }
+
+    public override DateTime? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        // Handle deserialization if needed (not implemented here)
+        throw new NotImplementedException();
+    }
+
+    public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
+    {
+        if (value.HasValue)
+        {
+            DateTime dateTimeToConvert = value.Value;
+
+            // Check if the incoming date is not UTC, convert it to UTC from the source time zone
+            if (dateTimeToConvert.Kind != DateTimeKind.Utc)
+            {
+                dateTimeToConvert = TimeZoneInfo.ConvertTimeToUtc(dateTimeToConvert, _sourceTimeZone);
+            }
+
+            // Convert the UTC DateTime to Eastern Standard Time (EST/EDT)
+            TimeZoneInfo estZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            var estDateTime = TimeZoneInfo.ConvertTimeFromUtc(dateTimeToConvert, estZone);
+
+            // Calculate Unix time milliseconds
+            long unixTimeMilliseconds = new DateTimeOffset(estDateTime).ToUnixTimeMilliseconds();
+
+            // Serialize in Microsoft Date format: \/Date(ticks)\/
+            string microsoftDateFormat = $"\\/Date({unixTimeMilliseconds})\\/";
+            writer.WriteStringValue(microsoftDateFormat);
+        }
+        else
+        {
+            // Write a JSON null value if the DateTime is null
+            writer.WriteNullValue();
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        var centralTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
+        var utcTimeZone = TimeZoneInfo.Utc; // Use this for UTC dates
+
+        var options = new JsonSerializerOptions
+        {
+            Converters = { new MicrosoftDateFormatWithESTConverter(centralTimeZone) } // Change sourceTimeZone as needed
+        };
+
+        // Test with a DateTime value sourced from Central Time
+        DateTime centralTime = DateTime.Now; // Assume this is from the database in Central Time
+        string json = JsonSerializer.Serialize(centralTime, options);
+        Console.WriteLine("Serialized DateTime (Central to EST): " + json);
+
+        // Test with a DateTime value in UTC (no conversion should happen)
+        DateTime utcTime = DateTime.UtcNow; // Assume this is in UTC
+        var optionsWithUtc = new JsonSerializerOptions
+        {
+            Converters = { new MicrosoftDateFormatWithESTConverter(utcTimeZone) }
+        };
+        json = JsonSerializer.Serialize(utcTime, optionsWithUtc);
+        Console.WriteLine("Serialized DateTime (UTC): " + json);
+
+        // Test with null DateTime?
+        DateTime? nullableDateTime = null;
+        json = JsonSerializer.Serialize(nullableDateTime, options);
+        Console.WriteLine("Serialized null DateTime?: " + json);
+    }
+}
