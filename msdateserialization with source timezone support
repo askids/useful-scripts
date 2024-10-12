@@ -23,10 +23,24 @@ public class MicrosoftDateFormatWithESTConverter : JsonConverter<DateTime?>
         {
             DateTime dateTimeToConvert = value.Value;
 
-            // Check if the incoming date is not UTC, convert it to UTC from the source time zone
-            if (dateTimeToConvert.Kind != DateTimeKind.Utc)
+            // If the DateTime.Kind is Unspecified, treat it as UTC
+            if (dateTimeToConvert.Kind == DateTimeKind.Unspecified)
             {
-                dateTimeToConvert = TimeZoneInfo.ConvertTimeToUtc(dateTimeToConvert, _sourceTimeZone);
+                // If the source time zone is UTC, treat it as UTC directly
+                if (_sourceTimeZone == TimeZoneInfo.Utc)
+                {
+                    dateTimeToConvert = DateTime.SpecifyKind(dateTimeToConvert, DateTimeKind.Utc);
+                }
+                else
+                {
+                    // Convert the Unspecified DateTime to UTC from the source time zone
+                    dateTimeToConvert = TimeZoneInfo.ConvertTimeToUtc(dateTimeToConvert, _sourceTimeZone);
+                }
+            }
+            else if (dateTimeToConvert.Kind == DateTimeKind.Local)
+            {
+                // Local is treated as the system's local time zone, so convert it to UTC
+                dateTimeToConvert = dateTimeToConvert.ToUniversalTime();
             }
 
             // Convert the UTC DateTime to Eastern Standard Time (EST/EDT)
@@ -52,26 +66,20 @@ class Program
 {
     static void Main()
     {
-        var centralTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
-        var utcTimeZone = TimeZoneInfo.Utc; // Use this for UTC dates
-
+        var utcTimeZone = TimeZoneInfo.Utc; // Using UTC time zone for source data
         var options = new JsonSerializerOptions
         {
-            Converters = { new MicrosoftDateFormatWithESTConverter(centralTimeZone) } // Change sourceTimeZone as needed
+            Converters = { new MicrosoftDateFormatWithESTConverter(utcTimeZone) } // UTC Time zone for source data
         };
 
-        // Test with a DateTime value sourced from Central Time
-        DateTime centralTime = DateTime.Now; // Assume this is from the database in Central Time
-        string json = JsonSerializer.Serialize(centralTime, options);
-        Console.WriteLine("Serialized DateTime (Central to EST): " + json);
+        // Test with a DateTime value that is Unspecified (should treat as UTC)
+        DateTime unspecifiedTime = new DateTime(2024, 10, 12, 12, 0, 0, DateTimeKind.Unspecified); // Example value
+        string json = JsonSerializer.Serialize(unspecifiedTime, options);
+        Console.WriteLine("Serialized DateTime (Unspecified as UTC): " + json);
 
-        // Test with a DateTime value in UTC (no conversion should happen)
+        // Test with a UTC DateTime
         DateTime utcTime = DateTime.UtcNow; // Assume this is in UTC
-        var optionsWithUtc = new JsonSerializerOptions
-        {
-            Converters = { new MicrosoftDateFormatWithESTConverter(utcTimeZone) }
-        };
-        json = JsonSerializer.Serialize(utcTime, optionsWithUtc);
+        json = JsonSerializer.Serialize(utcTime, options);
         Console.WriteLine("Serialized DateTime (UTC): " + json);
 
         // Test with null DateTime?
