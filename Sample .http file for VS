@@ -1,0 +1,23 @@
+# Request 1
+GET https://{{FQDN}}/endpoint1
+Authorization: Bearer {{YOUR_TOKEN}}
+###
+
+# Request 2
+POST https://{{FQDN}}/endpoint2
+Content-Type: application/json
+Authorization: Bearer {{YOUR_TOKEN}}
+
+{
+  "key": "value"
+}
+###
+
+# Request 3
+PUT https://{{FQDN}}/endpoint3
+Content-Type: application/json
+
+{
+  "id": "123",
+  "status": "active"
+}
