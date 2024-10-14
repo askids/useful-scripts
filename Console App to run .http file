@@ -1,0 +1,149 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+
+namespace HttpFileRequestExecutor
+{
+    class Program
+    {
+        static async Task Main(string[] args)
+        {
+            string filePath = "requests.http"; // Path to the .http file
+            string variablesFilePath = "variables.env"; // Path to the variables file
+            
+            if (!File.Exists(filePath))
+            {
+                Console.WriteLine("File not found!");
+                return;
+            }
+
+            // Load variables
+            var variables = LoadVariables(variablesFilePath);
+
+            var httpClient = new HttpClient();
+            var requests = ParseHttpFile(filePath, variables);
+
+            foreach (var request in requests)
+            {
+                Console.WriteLine($"Executing: {request.Method} {request.Url}");
+                HttpRequestMessage httpRequest = new HttpRequestMessage(new HttpMethod(request.Method), request.Url);
+
+                // Add headers
+                foreach (var header in request.Headers)
+                {
+                    if (header.Key.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+                    {
+                        httpRequest.Content = new StringContent(request.Body, Encoding.UTF8, header.Value);
+                    }
+                    else
+                    {
+                        httpRequest.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                    }
+                }
+
+                if (httpRequest.Content == null && !string.IsNullOrEmpty(request.Body))
+                {
+                    // If there's a body but no Content-Type, we assume it's application/json
+                    httpRequest.Content = new StringContent(request.Body, Encoding.UTF8, "application/json");
+                }
+
+                // Execute the request
+                HttpResponseMessage response = await httpClient.SendAsync(httpRequest);
+                Console.WriteLine($"Response Status: {response.StatusCode}");
+                string responseBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Response Body: {responseBody}");
+            }
+        }
+
+        static Dictionary<string, string> LoadVariables(string filePath)
+        {
+            var variables = new Dictionary<string, string>();
+
+            if (File.Exists(filePath))
+            {
+                var lines = File.ReadAllLines(filePath);
+                foreach (var line in lines)
+                {
+                    if (line.Contains('='))
+                    {
+                        var parts = line.Split('=', 2);
+                        variables[parts[0].Trim()] = parts[1].Trim();
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Variables file not found: {filePath}");
+            }
+
+            return variables;
+        }
+
+        static HttpRequest[] ParseHttpFile(string filePath, Dictionary<string, string> variables)
+        {
+            var lines = File.ReadAllLines(filePath);
+            var requests = new List<HttpRequest>();
+            HttpRequest currentRequest = null;
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                // Replace variables in the line
+                var processedLine = ReplaceVariables(line, variables);
+
+                if (processedLine.StartsWith("GET") || processedLine.StartsWith("POST") || processedLine.StartsWith("PUT") || processedLine.StartsWith("DELETE"))
+                {
+                    // Start new request
+                    if (currentRequest != null)
+                    {
+                        requests.Add(currentRequest);
+                    }
+
+                    var parts = processedLine.Split(' ');
+                    currentRequest = new HttpRequest { Method = parts[0], Url = parts[1] };
+                }
+                else if (processedLine.Contains(":"))
+                {
+                    // Headers
+                    var headerParts = processedLine.Split(':', 2);
+                    currentRequest?.Headers.Add(headerParts[0].Trim(), headerParts[1].Trim());
+                }
+                else if (!processedLine.StartsWith("#") && currentRequest != null)
+                {
+                    // Body
+                    currentRequest.Body += processedLine + "\n";
+                }
+            }
+
+            // Add the last request
+            if (currentRequest != null)
+            {
+                requests.Add(currentRequest);
+            }
+
+            return requests.ToArray();
+        }
+
+        static string ReplaceVariables(string input, Dictionary<string, string> variables)
+        {
+            foreach (var variable in variables)
+            {
+                input = input.Replace($"{{{{{variable.Key}}}}}", variable.Value);
+            }
+            return input;
+        }
+    }
+
+    class HttpRequest
+    {
+        public string Method { get; set; }
+        public string Url { get; set; }
+        public string Body { get; set; } = string.Empty;
+        public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
+    }
+}
