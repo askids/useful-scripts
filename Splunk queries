@@ -87,3 +87,36 @@
     true(), "Other"  // Default case for unexpected status codes
 )
 | stats count as total_count, min(log_time) as min_log_time, max(log_time) as max_log_time by request_path, Status
+
+<your_search_query>
+| eval original_request_path = request_path
+| rex field=request_path mode=sed "s#/[0-9]{10,19}#/{someid}#g; 
+                                     s#WX[0-9]{7}#{anotherid}#g; 
+                                     s#(/dogs.*?)([/][AaXx](?=[a-zA-Z0-9]{6})[a-zA-Z0-9]{6})#\1/{dogid}#g; 
+                                     s#(/cats.*?)([a-zA-Z0-9_]+)@corp\.google\.com#\1/{catupn}#g; 
+                                     s#(.*?/api/members/)([a-zA-Z0-9]{5})$#\1{newid}#g; 
+                                     s#(.*?/api/members/)([a-zA-Z0-9]{5})/.*$#\1{newid}/\2#g; 
+                                     s#(/api/database/)([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(/.*)?#\1{guid}\3#g"
+| eval request_path = if(fieldx = "abc", "/api" . request_path, request_path)
+| eval Status = case(
+    StatusCode == 401, "Authentication Error",
+    StatusCode == 403, "Authorization Error",
+    StatusCode >= 200 AND StatusCode < 300, "Success",
+    StatusCode >= 300 AND StatusCode < 400, "Redirect",
+    StatusCode >= 400 AND StatusCode < 500, "Client Error",
+    StatusCode >= 500 AND StatusCode < 600, "Server Error",
+    true(), "Other"
+)
+| eval response_time = <response_time_field>  // replace with the actual field for response time in your logs
+| eval log_time = strptime(@t, "%Y-%m-%dT%H:%M:%S.%3N%z")  // Convert @t to epoch time
+| stats count as total_count, 
+        min(log_time) as min_log_time, 
+        max(log_time) as max_log_time, 
+        avg(response_time) as avg_response_time, 
+        median(response_time) as median_response_time,
+        count(eval(log_time >= relative_time(now(), "-24h"))) as count_last_24hrs  // Count for the last 24 hours
+        by request_path, Status
+| fieldformat min_log_time = strftime(min_log_time, "%Y-%m-%d %H:%M:%S %Z")
+| fieldformat max_log_time = strftime(max_log_time, "%Y-%m-%d %H:%M:%S %Z")
+| table request_path, Status, total_count, count_last_24hrs, min_log_time, max_log_time, avg_response_time, median_response_time
+
