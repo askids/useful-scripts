@@ -31,3 +31,8 @@
 | eval original_request_path = request_path
 | rex field=request_path mode=sed "s#/[0-9]{10,19}#/{someid}#g; s#WX[0-9]{7}#{anotherid}#g; s#(/dogs.*?)([/][AaXx](?=[a-zA-Z0-9]{6})[a-zA-Z0-9]{6})#\1/{dogid}#g; s#(/cats.*?)([a-zA-Z0-9_]+)@corp\.google\.com#\1/{catupn}#g"
 | table original_request_path, request_path
+
+<your_search_query>
+| eval original_request_path = request_path
+| rex field=request_path mode=sed "s#/[0-9]{10,19}#/{someid}#g; s#WX[0-9]{7}#{anotherid}#g; s#(/dogs.*?)([/][AaXx](?=[a-zA-Z0-9]{6})[a-zA-Z0-9]{6})#\1/{dogid}#g; s#(/cats.*?)([a-zA-Z0-9_]+)@corp\.google\.com#\1/{catupn}#g"
+| table original_request_path, request_path
