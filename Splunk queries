@@ -152,4 +152,37 @@
 | fieldformat max_log_time = strftime(max_log_time, "%Y-%m-%d %H:%M:%S %Z")
 | table request_path, Status, total_count, count_last_24hrs, min_log_time, max_log_time, avg_response_time, median_response_time
 
+<your_search_query>
+| eval original_request_path = request_path
+| rex field=request_path mode=sed "s#/[0-9]{10,19}#/{someid}#g; 
+                                     s#WX[0-9]{7}#{anotherid}#g; 
+                                     s#(/dogs.*?)([/][AaXx](?=[a-zA-Z0-9]{6})[a-zA-Z0-9]{6})#\1/{dogid}#g; 
+                                     s#(/cats.*?)([a-zA-Z0-9_]+)@corp\.google\.com#\1/{catupn}#g; 
+                                     s#(.*?/api/members/)([a-zA-Z0-9]{5})$#\1{newid}#g; 
+                                     s#(.*?/api/members/)([a-zA-Z0-9]{5})/.*$#\1{newid}/\2#g; 
+                                     s#(/api/database/)([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(/.*)?#\1{guid}\3#g"
+| eval request_path = if(fieldx = "abc", "/api" . request_path, request_path)
+| eval Status = case(
+    StatusCode == 401, "Authentication Error",
+    StatusCode == 403, "Authorization Error",
+    StatusCode >= 200 AND StatusCode < 300, "Success",
+    StatusCode >= 400 AND StatusCode < 600, "Client or Server Error",
+    true(), "Other"
+)
+| eval response_time = <response_time_field>  // replace with the actual field for response time in your logs
+| eval log_time = strptime('@t', "%Y-%m-%dT%H:%M:%S.%6N%Z")  // Ensure @t is enclosed in single quotes
+| stats count as total_count, 
+        min(log_time) as min_log_time, 
+        max(log_time) as max_log_time, 
+        round(avg(response_time), 2) as avg_response_time,  // Rounds average response time to 2 decimal places
+        median(response_time) as median_response_time,
+        count(eval(log_time >= relative_time(now(), "-24h"))) as count_last_24hrs,
+        count(eval(Status == "Success")) as success_count,
+        count(eval(Status == "Authorization Error")) as authorization_failure_count,
+        count(eval(Status == "Authentication Error")) as authentication_failure_count,
+        count(eval(Status == "Client or Server Error")) as client_server_error_count
+        by request_path
+| fieldformat min_log_time = strftime(min_log_time, "%Y-%m-%d %H:%M:%S %Z")
+| fieldformat max_log_time = strftime(max_log_time, "%Y-%m-%d %H:%M:%S %Z")
+| table request_path, total_count, count_last_24hrs, success_count, authorization_failure_count, authentication_failure_count, client_server_error_count, min_log_time, max_log_time, avg_response_time, median_response_time
 
