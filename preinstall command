@@ -1,19 +1,30 @@
 powershell -Command "& { 
-    $startTime = Get-Date
-    \"Script started at: $startTime\" 
+    $startTime = Get-Date; 
+    \"Script started at: $startTime\"; 
     Get-Process | Where-Object { $_.Name -like '*abc.de*' } | ForEach-Object { 
         try { 
-            $exePath = $_.Path
-            $arguments = $_.StartInfo.Arguments
-            $_.Kill()
-            \"Killed process: Name=$($_.Name), Path=$exePath, Arguments=$arguments\"
+            $exePath = $_.Path; 
+            $arguments = $_.StartInfo.Arguments; 
+            $_.Kill(); 
+            \"Killed process: Name=$($_.Name), Path=$exePath, Arguments=$arguments\"; 
         } 
         catch { 
-            \"Failed to kill process $($_.Name): $($_.Exception.Message)\" 
+            \"Failed to kill process $($_.Name): $($_.Exception.Message)\"; 
         } 
     }; 
-    Get-Acl -Path 'D:\' | Set-Acl -Path 'G:\'; 
-    \"Processes killed and permissions copied.\"
-    $endTime = Get-Date
-    \"Script ended at: $endTime\"
+    
+    # Get existing ACLs
+    $existingAcl = Get-Acl -Path 'G:\'; 
+    $newAcl = Get-Acl -Path 'D:\'; 
+    
+    # Merge ACLs
+    $combinedAcl = $existingAcl.Access + $newAcl.Access; 
+    
+    # Apply combined ACL to G:
+    $combinedAcl | ForEach-Object { $existingAcl.SetAccessRule($_); }; 
+    Set-Acl -Path 'G:\' -AclObject $existingAcl; 
+    
+    \"Processes killed and permissions copied incrementally.\"; 
+    $endTime = Get-Date; 
+    \"Script ended at: $endTime\"; 
 }" >> C:\temp-pre-installlog.txt 2>&1
