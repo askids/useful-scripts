@@ -1,4 +1,6 @@
 powershell -Command "& { 
+    $startTime = Get-Date
+    \"Script started at: $startTime\" 
     Get-Process | Where-Object { $_.Name -like '*abc.de*' } | ForEach-Object { 
         try { 
             $exePath = $_.Path
@@ -11,5 +13,7 @@ powershell -Command "& {
         } 
     }; 
     Get-Acl -Path 'D:\' | Set-Acl -Path 'G:\'; 
-    \"Processes killed and permissions copied.\" 
+    \"Processes killed and permissions copied.\"
+    $endTime = Get-Date
+    \"Script ended at: $endTime\"
 }" >> C:\temp-pre-installlog.txt 2>&1
