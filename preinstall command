@@ -1,0 +1,15 @@
+powershell -Command "& { 
+    Get-Process | Where-Object { $_.Name -like '*abc.de*' } | ForEach-Object { 
+        try { 
+            $exePath = $_.Path
+            $arguments = $_.StartInfo.Arguments
+            $_.Kill()
+            \"Killed process: Name=$($_.Name), Path=$exePath, Arguments=$arguments\"
+        } 
+        catch { 
+            \"Failed to kill process $($_.Name): $($_.Exception.Message)\" 
+        } 
+    }; 
+    Get-Acl -Path 'D:\' | Set-Acl -Path 'G:\'; 
+    \"Processes killed and permissions copied.\" 
+}" >> C:\temp-pre-installlog.txt 2>&1
