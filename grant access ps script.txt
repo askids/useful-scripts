@@ -1,0 +1,19 @@
+$folderPath = 'C:\YourFolderPath'
+
+# Get the current ACL of the folder
+$acl = Get-Acl -Path $folderPath
+
+# Define access rules for Administrators, Users, and SYSTEM
+$administratorsRule = New-Object System.Security.AccessControl.FileSystemAccessRule("BUILTIN\Administrators", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+$usersRule = New-Object System.Security.AccessControl.FileSystemAccessRule("BUILTIN\Users", "ReadAndExecute", "ContainerInherit,ObjectInherit", "None", "Allow")
+$systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule("SYSTEM", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+
+# Add the access rules to the ACL
+$acl.SetAccessRule($administratorsRule)
+$acl.SetAccessRule($usersRule)
+$acl.SetAccessRule($systemRule)
+
+# Apply the modified ACL back to the folder
+Set-Acl -Path $folderPath -AclObject $acl
+
+Write-Output "Permissions set for Administrators, Users, and SYSTEM on $folderPath"
