@@ -186,3 +186,12 @@
 | fieldformat max_log_time = strftime(max_log_time, "%Y-%m-%d %H:%M:%S %Z")
 | table request_path, total_count, count_last_24hrs, success_count, authorization_failure_count, authentication_failure_count, client_server_error_count, min_log_time, max_log_time, avg_response_time, median_response_time
 
+<your_search_query>
+| eval log_time = strptime('@t', "%Y-%m-%dT%H:%M:%S.%6N%Z")  // Convert @t to a timestamp if not already
+| eval day_of_week = strftime(log_time, "%w")  // Get the day of the week (0=Sunday, 1=Monday, ..., 6=Saturday)
+| eval is_holiday = if(match(strftime(log_time, "%Y-%m-%d"), "^(2024-11-28|2024-12-25|2025-01-01|...)$"), 1, 0) // Add your holiday dates here
+| where day_of_week NOT IN ("0", "6") AND is_holiday = 0  // Exclude weekends and specific holidays
+| stats count as total_count by request_path, log_time
+| timechart span=1d avg(total_count) as avg_daily_count // Calculate daily average count only for weekdays
+| rename avg_daily_count as avg_working_day_count
+| table request_path, avg_working_day_count
