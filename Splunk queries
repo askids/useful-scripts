@@ -195,3 +195,15 @@
 | timechart span=1d avg(total_count) as avg_daily_count // Calculate daily average count only for weekdays
 | rename avg_daily_count as avg_working_day_count
 | table request_path, avg_working_day_count
+
+<your_search_query>
+| stats dc(userId) as unique_users_selected_time_range  // Count distinct users in the selected time range
+
+| appendcols [
+    search <your_search_query> earliest=-30d@d latest=@d  // Restrict to the past month
+    | bin _time span=1d  // Group by day
+    | stats dc(userId) as daily_unique_users by _time  // Count daily unique users
+    | stats avg(daily_unique_users) as avg_daily_unique_users_last_month  // Calculate average daily unique users for the month
+]
+
+| table unique_users_selected_time_range, avg_daily_unique_users_last_month
