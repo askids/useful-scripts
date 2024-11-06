@@ -1,0 +1,70 @@
+<#
+.SYNOPSIS
+    This script compares the `createdDate` property between `vaultsecretsettings.Default.json` 
+    and `vaultsecretsettings.json`. If `vaultsecretsettings.Default.json` has a more recent date,
+    or if `vaultsecretsettings.json` is missing, the contents of `vaultsecretsettings.Default.json` 
+    are copied to `vaultsecretsettings.json`.
+
+.DESCRIPTION
+    - If `vaultsecretsettings.json` does not exist, it will be created with the contents of `vaultsecretsettings.Default.json`.
+    - If `vaultsecretsettings.json` exists but is missing `createdDate`, it defaults `createdDate` to 180 days before the current date.
+    - If `vaultsecretsettings.Default.json` has a newer `createdDate` than `vaultsecretsettings.json`, it will overwrite `vaultsecretsettings.json`.
+#>
+
+# Sample JSON content:
+# vaultsecretsettings.Default.json
+# {
+#     "vaultSecretId": "12345",
+#     "createdBy": "Admin",
+#     "createdDate": "2024-01-01"
+# }
+#
+# vaultsecretsettings.json (optional - may or may not exist)
+# {
+#     "vaultSecretId": "54321",
+#     "createdBy": "User",
+#     "createdDate": "2023-01-01"
+# }
+
+Write-Host "Starting script to compare and update JSON files..."
+
+# Define file paths based on the script's location
+$file1Path = Join-Path -Path $PSScriptRoot -ChildPath "vaultsecretsettings.Default.json"
+$file2Path = Join-Path -Path $PSScriptRoot -ChildPath "vaultsecretsettings.json"
+
+# Read the content of vaultsecretsettings.Default.json
+$file1Data = Get-Content -Path $file1Path | ConvertFrom-Json
+
+# Get the createdDate from vaultsecretsettings.Default.json (file1)
+$file1Date = [DateTime]::ParseExact($file1Data.createdDate, "yyyy-MM-dd", $null)
+
+# Check if vaultsecretsettings.json exists
+if (Test-Path -Path $file2Path) {
+    Write-Host "vaultsecretsettings.json exists. Reading contents..."
+    # Read the content of vaultsecretsettings.json
+    $file2Data = Get-Content -Path $file2Path | ConvertFrom-Json
+
+    # Try to get the createdDate from file2
+    try {
+        $file2Date = [DateTime]::ParseExact($file2Data.createdDate, "yyyy-MM-dd", $null)
+    }
+    catch {
+        # If createdDate is missing or invalid, set default to current date - 180 days
+        $file2Date = (Get-Date).AddDays(-180)
+        Write-Host "createdDate missing or invalid in vaultsecretsettings.json. Defaulting to $file2Date."
+    }
+
+    # Compare the dates
+    if ($file1Date -gt $file2Date) {
+        Write-Host "vaultsecretsettings.Default.json has a more recent createdDate. Copying contents to vaultsecretsettings.json."
+        $file1Data | ConvertTo-Json -Depth 10 | Set-Content -Path $file2Path
+    } else {
+        Write-Host "vaultsecretsettings.json has the same or more recent createdDate. Retaining vaultsecretsettings.json as is."
+    }
+} else {
+    # If vaultsecretsettings.json does not exist, create it with the content of vaultsecretsettings.Default.json
+    Write-Host "vaultsecretsettings.json does not exist. Creating it with contents of vaultsecretsettings.Default.json."
+    $file1Data | ConvertTo-Json -Depth 10 | Set-Content -Path $file2Path
+}
+
+Write-Host "Script execution completed."
