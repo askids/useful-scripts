@@ -1,0 +1,138 @@
+{
+  "ApiHealthCheckUrls": {
+    "prod": {
+      "API1": "https://api1-prod.example.com/health",
+      "API2": "https://api2-prod.example.com/health",
+      "API3": "https://api3-prod.example.com/health"
+    },
+    "dev": {
+      "API1": "https://api1-dev.example.com/health",
+      "API2": "https://api2-dev.example.com/health",
+      "API3": "https://api3-dev.example.com/health"
+    },
+    "staging": {
+      "API1": "https://api1-staging.example.com/health",
+      "API2": "https://api2-staging.example.com/health",
+      "API3": "https://api3-staging.example.com/health"
+    }
+  }
+}
+
+Program.cs
+
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using HealthChecks.UI.Client;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Primitives;
+using System.Net.Http;
+using Newtonsoft.Json.Linq;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Load the environments from appsettings.json
+var apiUrlsByEnvironment = builder.Configuration.GetSection("ApiHealthCheckUrls").Get<Dictionary<string, Dictionary<string, string>>>();
+
+// Register HttpClient
+builder.Services.AddHttpClient();
+
+// HealthCheck UI configuration
+builder.Services.AddHealthChecksUI(setup =>
+{
+    setup.SetEvaluationTimeInSeconds(10); // Health check evaluation interval (in seconds)
+    setup.SetMinimumSecondsBetweenFailureNotifications(60); // Interval between failure notifications
+    setup.AddHealthCheckEndpoint("External API Health", "/health");
+}).AddInMemoryStorage(); // In-memory storage for health check UI
+
+var app = builder.Build();
+
+// Middleware to extract environment parameter
+app.Use(async (context, next) =>
+{
+    // Extract the environment parameter from the query string or URL path
+    string environment = context.Request.Query["env"];
+
+    if (string.IsNullOrEmpty(environment))
+    {
+        // If no environment is specified, default to "prod"
+        environment = "prod";
+    }
+
+    // Check if the specified environment exists in the configuration
+    if (!apiUrlsByEnvironment.ContainsKey(environment))
+    {
+        // If environment not found, return 404 or redirect to a default environment
+        context.Response.StatusCode = 404;
+        await context.Response.WriteAsync($"Environment '{environment}' not found.");
+        return;
+    }
+
+    // Register health checks dynamically based on the selected environment
+    var apiUrls = apiUrlsByEnvironment[environment];
+
+    foreach (var api in apiUrls)
+    {
+        var apiName = api.Key;  // API short name (used in HealthCheck UI)
+        var healthCheckUrl = api.Value;  // API health check URL
+
+        builder.Services.AddHealthChecks()
+            .AddCheck<CustomApiHealthCheck>(apiName, // Use API short name as the display name in the UI
+                sp => new CustomApiHealthCheck(sp.GetRequiredService<HttpClient>(), healthCheckUrl));
+    }
+
+    // Continue with the next middleware
+    await next();
+});
+
+// Configure the HTTP request pipeline
+app.UseRouting();
+
+app.UseEndpoints(endpoints =>
+{
+    // Expose the HealthCheck UI endpoint (only)
+    endpoints.MapHealthChecksUI("/health-ui"); // The HealthCheck UI
+});
+
+app.Run();
+
+// Custom health check class for external API health checks
+public class CustomApiHealthCheck : IHealthCheck
+{
+    private readonly HttpClient _httpClient;
+    private readonly string _url;
+
+    public CustomApiHealthCheck(HttpClient httpClient, string url)
+    {
+        _httpClient = httpClient;
+        _url = url;
+    }
+
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Perform the HTTP request to the API's health check endpoint
+            var response = await _httpClient.GetAsync(_url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return HealthCheckResult.Unhealthy($"API responded with status code {response.StatusCode}");
+            }
+
+            // Parse the response body
+            var responseBody = await response.Content.ReadAsStringAsync();
+            var jsonResponse = JObject.Parse(responseBody);
+
+            // Check if the response contains the expected "message" field with value "Healthy"
+            if (jsonResponse["message"]?.ToString() == "Healthy")
+            {
+                return HealthCheckResult.Healthy();
+            }
+
+            return HealthCheckResult.Unhealthy("API health check returned an unexpected message.");
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy($"Exception occurred: {ex.Message}");
+        }
+    }
+}
