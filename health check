@@ -1,13 +1,13 @@
 {
-  "ApiHealthCheckUrls": [
-    "https://api1.example.com/health",
-    "https://api2.example.com/health",
-    "https://api3.example.com/health",
-    "https://api4.example.com/health",
+  "ApiHealthCheckUrls": {
+    "API1": "https://api1.example.com/health",
+    "API2": "https://api2.example.com/health",
+    "API3": "https://api3.example.com/health",
     ...
-    "https://api60.example.com/health"
-  ]
+    "API60": "https://api60.example.com/health"
+  }
 }
+
 
 Program.cs
 
@@ -17,21 +17,25 @@ using HealthChecks.UI.Client;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http;
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Read the API health check URLs from the appsettings.json
-var apiUrls = builder.Configuration.GetSection("ApiHealthCheckUrls").Get<List<string>>();
+// Read the API health check URLs from appsettings.json
+var apiUrls = builder.Configuration.GetSection("ApiHealthCheckUrls").Get<Dictionary<string, string>>();
 
 // Register HttpClient
 builder.Services.AddHttpClient();
 
-// Register a custom health check for each API URL
-foreach (var url in apiUrls)
+// Register a custom health check for each API name and URL
+foreach (var api in apiUrls)
 {
+    var apiName = api.Key;  // API short name (used in HealthCheck UI)
+    var healthCheckUrl = api.Value;  // API health check URL
+
     builder.Services.AddHealthChecks()
-        .AddCheck<CustomApiHealthCheck>($"API Health Check for {url}",
-            sp => new CustomApiHealthCheck(sp.GetRequiredService<HttpClient>(), url));
+        .AddCheck<CustomApiHealthCheck>(apiName, // Use API short name as the display name in the UI
+            sp => new CustomApiHealthCheck(sp.GetRequiredService<HttpClient>(), healthCheckUrl));
 }
 
 // Add HealthCheck UI configuration with in-memory storage (default)
@@ -103,4 +107,3 @@ public class CustomApiHealthCheck : IHealthCheck
         }
     }
 }
-
