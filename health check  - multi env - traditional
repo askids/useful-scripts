@@ -1,0 +1,157 @@
+Program.cs 
+
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Use Startup class for configuring services and middleware
+builder.Services.AddStartupConfiguration();
+
+var app = builder.Build();
+
+// Run the app
+app.Run();
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using HealthChecks.UI.Client;
+using System.Net.Http;
+using Newtonsoft.Json.Linq;
+
+public class Startup
+{
+    private readonly IConfiguration _configuration;
+
+    public Startup(IConfiguration configuration)
+    {
+        _configuration = configuration;
+    }
+
+    // This method is used to configure services (dependency injection)
+    public void ConfigureServices(IServiceCollection services)
+    {
+        // Load environment-specific API URLs from appsettings.json
+        var apiUrlsByEnvironment = _configuration.GetSection("ApiHealthCheckUrls").Get<Dictionary<string, Dictionary<string, string>>>();
+
+        // Register HttpClient
+        services.AddHttpClient();
+
+        // Register dynamic health checks for external APIs
+        services.AddHealthChecksUI(setup =>
+        {
+            setup.SetEvaluationTimeInSeconds(10); // Health check evaluation interval (in seconds)
+            setup.SetMinimumSecondsBetweenFailureNotifications(60); // Interval between failure notifications
+            setup.AddHealthCheckEndpoint("External API Health", "/health");
+        }).AddInMemoryStorage(); // Use in-memory storage for HealthCheck UI
+
+        // Register a middleware that will dynamically register health checks based on the environment
+        services.AddSingleton<IStartupFilter>(new EnvironmentHealthCheckSetup(apiUrlsByEnvironment));
+    }
+
+    // This method is used to configure the HTTP request pipeline (middleware)
+    public void Configure(IApplicationBuilder app)
+    {
+        // Use routing for endpoints
+        app.UseRouting();
+
+        // Use dynamic health check setup
+        app.UseMiddleware<HealthCheckMiddleware>();
+
+        // Configure HealthCheck UI
+        app.UseEndpoints(endpoints =>
+        {
+            // Expose the HealthCheck UI endpoint
+            endpoints.MapHealthChecksUI("/health-ui"); // HealthCheck UI route
+        });
+    }
+}
+
+// Custom middleware to handle dynamic health check registration based on environment
+public class HealthCheckMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public HealthCheckMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        // Extract environment from query parameter or default to "prod"
+        var environment = context.Request.Query["env"].ToString() ?? "prod";
+
+        // Check if the environment is available in the configuration
+        var apiUrlsByEnvironment = context.RequestServices.GetRequiredService<IConfiguration>()
+            .GetSection("ApiHealthCheckUrls")
+            .Get<Dictionary<string, Dictionary<string, string>>>();
+
+        if (!apiUrlsByEnvironment.ContainsKey(environment))
+        {
+            context.Response.StatusCode = 404;
+            await context.Response.WriteAsync($"Environment '{environment}' not found.");
+            return;
+        }
+
+        // Dynamically register health checks for the selected environment's APIs
+        var apiUrls = apiUrlsByEnvironment[environment];
+        var healthChecksBuilder = context.RequestServices.GetRequiredService<IHealthChecksBuilder>();
+
+        foreach (var api in apiUrls)
+        {
+            var apiName = api.Key;
+            var healthCheckUrl = api.Value;
+
+            healthChecksBuilder.AddCheck<CustomApiHealthCheck>(
+                apiName, // API name as display name in HealthCheck UI
+                sp => new CustomApiHealthCheck(sp.GetRequiredService<HttpClient>(), healthCheckUrl));
+        }
+
+        await _next(context);
+    }
+}
+
+// Custom health check class for external API health checks
+public class CustomApiHealthCheck : IHealthCheck
+{
+    private readonly HttpClient _httpClient;
+    private readonly string _url;
+
+    public CustomApiHealthCheck(HttpClient httpClient, string url)
+    {
+        _httpClient = httpClient;
+        _url = url;
+    }
+
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Perform the HTTP request to the API's health check endpoint
+            var response = await _httpClient.GetAsync(_url, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return HealthCheckResult.Unhealthy($"API responded with status code {response.StatusCode}");
+            }
+
+            // Parse the response body
+            var responseBody = await response.Content.ReadAsStringAsync();
+            var jsonResponse = JObject.Parse(responseBody);
+
+            // Check if the response contains the expected "message" field with value "Healthy"
+            if (jsonResponse["message"]?.ToString() == "Healthy")
+            {
+                return HealthCheckResult.Healthy();
+            }
+
+            return HealthCheckResult.Unhealthy("API health check returned an unexpected message.");
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy($"Exception occurred: {ex.Message}");
+        }
+    }
+}
