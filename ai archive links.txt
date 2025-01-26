@@ -17,3 +17,6 @@ https://aiarchives.org/id/vAxfECt22484s7ln97HA-p
 JMeter
 https://aiarchives.org/id/fWPZmJdIOpLyMaqsaKW0-p
 https://aiarchives.org/id/R74c07u1vEVALPDISg2n-p
+
+Loca/Cors
+https://aiarchives.org/id/RzzqbEz5GHAP0ll7CIFk-p
