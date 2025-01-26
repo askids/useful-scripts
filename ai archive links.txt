@@ -18,5 +18,6 @@ JMeter
 https://aiarchives.org/id/fWPZmJdIOpLyMaqsaKW0-p
 https://aiarchives.org/id/R74c07u1vEVALPDISg2n-p
 
-Loca/Cors
+Local/Cors
 https://aiarchives.org/id/RzzqbEz5GHAP0ll7CIFk-p
+https://aiarchives.org/id/gvofKcqUpnQhULmJg7tH-p
