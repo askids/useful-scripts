@@ -31,3 +31,6 @@ https://aiarchives.org/id/zJixcG2tdz8Aqr6EflUi-p
 
 SP dynamic execution
 https://aiarchives.org/id/Xptxlfj0H85x2p37jUSl-p
+
+HttpClient Factory
+https://aiarchives.org/id/7c8WKRuxrQ6pWik7bWxY-p
