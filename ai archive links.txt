@@ -21,3 +21,12 @@ https://aiarchives.org/id/R74c07u1vEVALPDISg2n-p
 Local/Cors
 https://aiarchives.org/id/RzzqbEz5GHAP0ll7CIFk-p
 https://aiarchives.org/id/gvofKcqUpnQhULmJg7tH-p
+
+Blazor - Dynamic Report
+https://aiarchives.org/id/42q1Iaxlcp0Pn2JuL7D7-p
+
+Indepdent Blazor widget
+https://aiarchives.org/id/zJixcG2tdz8Aqr6EflUi-p
+
+SP dynamic execution
+https://aiarchives.org/id/Xptxlfj0H85x2p37jUSl-p
