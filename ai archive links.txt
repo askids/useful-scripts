@@ -24,6 +24,7 @@ https://aiarchives.org/id/gvofKcqUpnQhULmJg7tH-p
 
 Blazor - Dynamic Report
 https://aiarchives.org/id/42q1Iaxlcp0Pn2JuL7D7-p
+https://aiarchives.org/id/nRRGoZZQU2KkPc9Zb4Ay-p (with Blazor training plan)
 
 Indepdent Blazor widget
 https://aiarchives.org/id/zJixcG2tdz8Aqr6EflUi-p
