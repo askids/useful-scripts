@@ -29,6 +29,9 @@ https://aiarchives.org/id/nRRGoZZQU2KkPc9Zb4Ay-p (with Blazor training plan)
 Indepdent Blazor widget
 https://aiarchives.org/id/zJixcG2tdz8Aqr6EflUi-p
 
+Elasticsearch
+https://aiarchives.org/id/qeFSyXC57Ue9nnVDY23v-p
+
 SP dynamic execution
 https://aiarchives.org/id/Xptxlfj0H85x2p37jUSl-p
 
