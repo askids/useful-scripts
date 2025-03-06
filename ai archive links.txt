@@ -40,3 +40,6 @@ https://aiarchives.org/id/7c8WKRuxrQ6pWik7bWxY-p
 
 OAuth2
 https://chatgpt.com/c/67c5a10e-37ac-800c-81c8-25fc2a1468a0
+
+Splunk
+https://aiarchives.org/id/3Pw94YPqvPBtLFkdCCqs-p
