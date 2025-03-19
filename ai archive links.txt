@@ -49,3 +49,6 @@ https://aiarchives.org/id/OZ3Pk84t4YccQnI6rd7b-p
 Benchmark
 https://aiarchives.org/id/XYJqCGghDSJrFie1qwcJ-p
 https://aiarchives.org/id/ILgcNKk0vfyVYL9wpmnf-p
+
+Serilog condition Routing
+https://aiarchives.org/id/YG6IpQWF0NW8aRs0yDRQ-p
