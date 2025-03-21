@@ -52,6 +52,9 @@ https://aiarchives.org/id/ILgcNKk0vfyVYL9wpmnf-p
 
 Serilog condition Routing
 https://aiarchives.org/id/YG6IpQWF0NW8aRs0yDRQ-p
+https://aiarchives.org/id/YG6IpQWF0NW8aRs0yDRQ-p
 
 Elasticsearch Pipeline
-https://aiarchives.org/id/y0t6I57GT6pGLxaOwhCl-p
+https://aiarchives.org/id/y0t6I57GT6pGLxaOwhCl-p  (Gemini)
+https://aiarchives.org/id/SVrbYG2lsfDhD6flwVj0-p
+https://aiarchives.org/id/l40URqUCZmYJUeqharaX-p
