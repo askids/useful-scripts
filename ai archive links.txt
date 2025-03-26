@@ -58,3 +58,6 @@ Elasticsearch Pipeline
 https://aiarchives.org/id/y0t6I57GT6pGLxaOwhCl-p  (Gemini)
 https://aiarchives.org/id/SVrbYG2lsfDhD6flwVj0-p
 https://aiarchives.org/id/l40URqUCZmYJUeqharaX-p
+
+Streamning response
+https://aiarchives.org/id/g1lss7AAxPBB7USopMCe-p
