@@ -67,3 +67,7 @@ https://aiarchives.org/id/fowG7d3tXUzh3Aux2SVT-p
 
 Connection Warmer
 https://aiarchives.org/id/raVDZz0gHCWOE7D7JKiU-p
+
+Blazor loader
+https://aiarchives.org/id/thsqWLBeTbPXidk7fqVW-p
+https://aiarchives.org/id/PKoyPhnqeQ0GRUKMlBnQ-p
