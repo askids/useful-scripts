@@ -72,5 +72,6 @@ Blazor loader
 https://aiarchives.org/id/thsqWLBeTbPXidk7fqVW-p
 https://aiarchives.org/id/PKoyPhnqeQ0GRUKMlBnQ-p
 https://aiarchives.org/id/etSvO9cp0hX9NQ6y8JU1
+https://aiarchives.org/id/eduuG1EnpmlI4AcFoBxE-p
 https://www.meziantou.net/showing-a-loading-screen-while-initializing-a-blazor-application.htm
 https://www.meziantou.net/creating-a-reusable-loading-indicator-in-blazor.htm
