@@ -74,5 +74,6 @@ https://aiarchives.org/id/PKoyPhnqeQ0GRUKMlBnQ-p
 https://aiarchives.org/id/etSvO9cp0hX9NQ6y8JU1
 https://aiarchives.org/id/0N16g6bBu4NdaFb7Szn7-p (top)
 https://aiarchives.org/id/4ChQW5RI4BtcaSkh2jUf-p (overlay)
+https://aiarchives.org/id/YBb6L3B8H9b2wnjXA1LQ-p (overlay-updated)
 https://www.meziantou.net/showing-a-loading-screen-while-initializing-a-blazor-application.htm
 https://www.meziantou.net/creating-a-reusable-loading-indicator-in-blazor.htm
