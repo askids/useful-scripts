@@ -81,3 +81,6 @@ https://www.meziantou.net/creating-a-reusable-loading-indicator-in-blazor.htm
 MudBlazor Table
 https://aiarchives.org/id/K7kQGYX8824FUbWj2DdK-p
 https://aiarchives.org/id/7vhIvXnTHa5dmWoAP7LZ-p
+
+MudInputs
+https://aiarchives.org/id/oLfQG3IOkX7WCwEyg6DB-p
