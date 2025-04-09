@@ -88,3 +88,6 @@ https://aiarchives.org/id/vxGaRA62twXS9K6Q1f8U-p
 
 Json generic parsing
 https://aiarchives.org/id/fxp4H9yUFM27ALhIYBGZ-p
+
+Fluent UI
+https://aiarchives.org/id/ExYfY8M6iYVG1UaEJK3d-p
