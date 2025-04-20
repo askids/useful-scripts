@@ -105,3 +105,9 @@ https://aiarchives.org/id/FmNCGIk0uhuVrOPYXMWs-p
 
 Blazoe client side sesionStorage
 https://aiarchives.org/id/rmFmE66dRczY9UeHeb47-p
+
+DataReader Metadata
+https://aiarchives.org/id/DwtKM0bLZUwHabVptkgu-p
+
+DB2 Dynamic Merge
+https://aiarchives.org/id/Rlhsn1hqsWMbmAGBlw81-p
