@@ -102,6 +102,7 @@ https://aiarchives.org/id/91HFHwXlwY3LT4Fzn5cd-p
 Radzen
 https://aiarchives.org/id/LZOsgWILUZUHIt2D2wZE-p
 https://aiarchives.org/id/FmNCGIk0uhuVrOPYXMWs-p
+https://aiarchives.org/id/BVBvvU9cw05nidDp9FnO-p
 
 Blazoe client side sesionStorage
 https://aiarchives.org/id/rmFmE66dRczY9UeHeb47-p
