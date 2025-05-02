@@ -120,6 +120,7 @@ https://aiarchives.org/id/Rlhsn1hqsWMbmAGBlw81-p
 
 Grant Cert Access
 https://aiarchives.org/id/PfvFvD0CWNqts71z1F7a-p
+https://aiarchives.org/id/qvk1069NVuqH7vj0sPtu-p
 
 Set App pool identity
 https://aiarchives.org/id/H6HRXjZi9GCmV56zmftr-p
