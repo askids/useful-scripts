@@ -114,8 +114,11 @@ https://aiarchives.org/id/aVSSBvaXDNq675xqTkIh-p
 
 https://aiarchives.org/id/CPBK7ZO1peHaynY7HuEe-p
 
-Blazoe client side sesionStorage
+Blazor client side sesionStorage
 https://aiarchives.org/id/rmFmE66dRczY9UeHeb47-p
+
+Blazor Dynamic Theme
+https://aiarchives.org/id/b8j7yr5IP1ONUqogaPy7-p
 
 DataReader Metadata
 https://aiarchives.org/id/DwtKM0bLZUwHabVptkgu-p
