@@ -1,0 +1,85 @@
+using Microsoft.Net.Http.Headers;
+
+public static class MinimalApiExtensions
+{
+    /// <summary>
+    /// Disables client-side caching by setting appropriate HTTP headers.
+    /// Safe to use even if Output Caching is not enabled globally.
+    /// Works with any endpoint handler and any return type.
+    /// </summary>
+    public static RouteHandlerBuilder DisableClientCaching(this RouteHandlerBuilder builder)
+    {
+        builder.AddEndpointFilter(async (context, next) =>
+        {
+            // Execute the actual endpoint handler first
+            var result = await next(context);
+
+            // Now modify the response headers
+            var headers = context.HttpContext.Response.GetTypedHeaders();
+
+            headers.CacheControl = new CacheControlHeaderValue
+            {
+                NoCache = true,
+                NoStore = true,
+                MustRevalidate = true,
+                MaxAge = TimeSpan.Zero
+            };
+
+            headers.Pragma = new PragmaHeaderValue("no-cache");
+            headers.Expires = DateTimeOffset.UtcNow.AddDays(-1); // Far past
+
+            return result;
+        });
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Disables client-side caching by setting no-cache headers ONLY if they haven't been set already.
+    /// Safe when Output Caching is not enabled globally.
+    /// Works with any endpoint handler and any return type.
+    /// </summary>
+    public static RouteHandlerBuilder DisableClientCachingWithCheck(this RouteHandlerBuilder builder)
+    {
+        builder.AddEndpointFilter(async (context, next) =>
+        {
+            // Execute the endpoint handler first
+            var result = await next(context);
+
+            var response = context.HttpContext.Response;
+            var headers = response.GetTypedHeaders();
+
+            // Only set Cache-Control if not already present
+            if (headers.CacheControl == null)
+            {
+                headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    NoStore = true,
+                    MustRevalidate = true,
+                    MaxAge = TimeSpan.Zero
+                };
+            }
+
+            // Only set Pragma if not already present
+            if (!response.Headers.ContainsKey(HeaderNames.Pragma))
+            {
+                headers.Pragma = new PragmaHeaderValue("no-cache");
+            }
+
+            // Only set Expires if not already present
+            if (headers.Expires == null)
+            {
+                headers.Expires = DateTimeOffset.UtcNow.AddDays(-1);
+            }
+
+            return result;
+        });
+
+        return builder;
+    }
+}
+/* Sample use
+app.MapGet("/time", () => DateTime.UtcNow)
+   .DisableClientCaching();
+*/
