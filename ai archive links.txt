@@ -135,3 +135,6 @@ https://aiarchives.org/id/qvk1069NVuqH7vj0sPtu-p
 
 Set App pool identity
 https://aiarchives.org/id/H6HRXjZi9GCmV56zmftr-p
+
+Redis reconnection
+https://aiarchives.org/id/1TtUpJYH2z8jqca3sETb-p
